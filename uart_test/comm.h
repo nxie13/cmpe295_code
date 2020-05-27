@@ -13,7 +13,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define MAX_BUFFER_SIZE 3
+#define MAX_BUFFER_SIZE 32
 #define COMM_WAIT_TIME 5000
 
 //I2C State Machine Struct

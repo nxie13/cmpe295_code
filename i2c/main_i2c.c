@@ -50,15 +50,19 @@
 #include "temp_sensor.h"
 #include "sunlight_sensor.h"
 #include "port_and_clock.h"
+#include "adc.h"
 
 /**
  * main.c
  */
+
+static volatile uint16_t ADC_value = 0;
 void main(void)
 {
     clock_init();
     port_init();
     I2C_init();
+    adc_init();
     UART_init();
     timer_init();
     __enable_interrupt(); //Enable interrupts
@@ -72,49 +76,43 @@ void main(void)
 
     while (1)
     {
-        //P2OUT |= BIT0; //LED ON
         P2DIR |= BIT5; //switch to output to wake up Xbee
         P2OUT &= ~BIT5; //output low to pull sleep pin down
 
-        uint8_t data_buf[16] = { 0 };
-        data_buf[0] = 15; //Total of 15 bytes following the first byte
+        uint8_t data_buf[17] = { 0 };
 
-        uint16_t temp_data = get_temperature();
-        data_buf[1] = TEMP;
-        data_buf[2] = temp_data >> 8;
-        data_buf[3] = temp_data & 0xFF;
+         uint16_t temp_data = get_temperature();
+         data_buf[0] = 0xFF; //frame header
+         data_buf[1] = 17; //Total bytes that will be send
+         data_buf[2] = TEMP;
+         data_buf[3] = temp_data >> 8;
+         data_buf[4] = temp_data & 0xFF;
 
-        uint16_t hum_data = get_humidity();
-        data_buf[4] = HUM;
-        data_buf[5] = hum_data >> 8;
-        data_buf[6] = hum_data & 0xFF;
+         uint16_t hum_data = get_humidity();
+         data_buf[5] = HUM;
+         data_buf[6] = hum_data >> 8;
+         data_buf[7] = hum_data & 0xFF;
 
-        uint16_t vis_data = read_sunlight_VIS();
-        data_buf[7] = VIS;
-        data_buf[8] = vis_data >> 8;
-        data_buf[9] = vis_data & 0xFF;
+         uint16_t vis_data = read_sunlight_VIS();
+         data_buf[8] = VIS;
+         data_buf[9] = vis_data >> 8;
+         data_buf[10] = vis_data & 0xFF;
 
-        uint16_t uv_data = read_sunlight_UV();
-        data_buf[10] = UV;
-        data_buf[11] = uv_data >> 8;
-        data_buf[12] = uv_data & 0xFF;
+         uint16_t uv_data = read_sunlight_UV();
+         data_buf[11] = UV;
+         data_buf[12] = uv_data >> 8;
+         data_buf[13] = uv_data & 0xFF;
 
-        uint16_t ir_value = read_sunlight_IR();
-        data_buf[13] = IR;
-        data_buf[14] = ir_value >> 8;
-        data_buf[15] = ir_value & 0xFF;
+        trigger_adc();
 
-        //while (!(P2IN & BIT2)); //wait for Xbee to Signal ready on pin P2.2
+        while (ADC10CTL1 & ADC10BUSY);
 
-        //Xbee is now ready, send data over UART
+        data_buf[14] = TDS;
+        data_buf[15] = ADC_value >> 8;
+        data_buf[16] = ADC_value & 0xFF;
 
-        /*send_to_UART_per_sensor(VIS, vis_data);
-        send_to_UART_per_sensor(UV, uv_data);
-        send_to_UART_per_sensor(IR, ir_value);
-        send_to_UART_per_sensor(TEMP, temp_data);
-        send_to_UART_per_sensor(HUM, hum_data);*/
-
-        send_to_UART(data_buf, 16); //Total of 16 bytes send to UART
+        ADC_value = 0; //reset variable
+        send_to_UART(data_buf, data_buf[1]); //send to UART
 
         // while (P2IN & BIT2); //wait for Xbee to Signal ready on pin P2.2
         P2DIR &= ~BIT5; //switch back to input again
@@ -125,20 +123,24 @@ void main(void)
 }
 
 //******************************************************************************
-// GPIO Interrupt - Only used when GPIO wakes up MCU
+// ADC10 interrupt service routine
 //******************************************************************************
-/*#pragma vector=PORT2_VECTOR
- __interrupt void Port_2(void)
- {
- //If interrupt signal comes from P2.5
- if (P2IFG & BIT5)
- {
- //P2OUT ^= BIT0; //turn on LED
+#pragma vector=ADC10_VECTOR
+__interrupt void ADC10_ISR(void)
+{
+    ADC_value = ADC10MEM; //obtain ADC value from MEM buffer
+    LPM0_EXIT;
 
- P2IFG &= ~BIT5; //Clear interrupt
- LPM4_EXIT;
- }
- }*/
+#ifdef DEBUG_MODE
+    //The code segment below is just for debugging purpose
+    //No float conversion will be done in MSP430
+    float adc_voltage = ((float) adc_value) * 3.3 / 1024.0;
+    if (adc_voltage > 2)
+    P1OUT |= BIT6;//Turn on on-board led
+    else
+    P1OUT &= ~BIT6;//Turn off on-board led
+#endif
+}
 
 //******************************************************************************
 // I2C/UART Interrupt For Received and Transmitted Data
@@ -175,7 +177,7 @@ __interrupt void USCIAB0TX_ISR(void)
         case TX_REG_CMD_MODE:
             UCB0TXBUF = TransmitRegAddr;
             if (RXByteCtr)
-                MasterMode = SWITCH_TO_RX_MODE;   // Need to start receiving now
+                MasterMode = SWITCH_TO_RX_MODE; // Need to start receiving now
             else
                 MasterMode = TX_DATA_MODE; // Continue to transmission with the data in Transmit Buffer
             break;
@@ -206,7 +208,7 @@ __interrupt void USCIAB0TX_ISR(void)
                 //Done with transmission
                 UCB0CTL1 |= UCTXSTP;     // Send stop condition
                 MasterMode = IDLE_MODE;
-                IE2 &= ~UCB0TXIE;                       // disable TX interrupt
+                IE2 &= ~UCB0TXIE;                    // disable TX interrupt
             }
             break;
 
@@ -226,7 +228,7 @@ __interrupt void USCIAB0TX_ISR(void)
             UCA0TXBUF = TransmitBuffer[UART_byte_count];
             UART_byte_count++;
         }
-        else if (UART_byte_count == UART_total_byte_count - 1)//last byte
+        else if (UART_byte_count == UART_total_byte_count - 1) //last byte
         {
             UCA0TXBUF = TransmitBuffer[UART_byte_count];
             UART_byte_count++;
@@ -243,7 +245,8 @@ __interrupt void USCIAB0TX_ISR(void)
 // I2C/UART Interrupt For Start, Restart, Nack, Stop
 //******************************************************************************
 #pragma vector = USCIAB0RX_VECTOR
-__interrupt void USCIAB0RX_ISR(void)
+__interrupt
+void USCIAB0RX_ISR(void)
 {
     if (UCB0STAT & UCNACKIFG)
     {
@@ -264,7 +267,8 @@ __interrupt void USCIAB0RX_ISR(void)
 // TIMERA1 TAIFG Interrupt for periodically waking up system
 //******************************************************************************
 #pragma vector=TIMER1_A1_VECTOR
-__interrupt void TIMER_ISR(void)
+__interrupt
+void TIMER_ISR(void)
 {
     if (current_count == count_period)
     {

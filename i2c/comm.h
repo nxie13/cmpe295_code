@@ -13,7 +13,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define MAX_BUFFER_SIZE 16
+#define MAX_BUFFER_SIZE 32
 #define COMM_WAIT_TIME 5000
 
 //I2C State Machine Struct
@@ -34,6 +34,7 @@ typedef enum Data_TypeEnum{
     VIS = 3,
     UV = 4,
     IR = 5,
+    TDS = 6
 } Data_Type;
 
 volatile I2C_Mode MasterMode;
