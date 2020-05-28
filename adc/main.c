@@ -1,20 +1,19 @@
 /*
- * Main code (I2C) for CMPE295 Master Project
+ * Main code (ADC) for CMPE295 Master Project
  * By Chong Hang Cheong and Nuoya Xie
  *
  *To get lowest power consumption possible:
  * 1. Configure all GPIO as output 0
- * 2. When sleeping, the MCU stays in LPM0, which consumes ~35uA
+ * 2. When sleeping, the MCU stays in LPM3, lowest LPM possible with clock active
  *
- * This version of code should be used for sensors read with I2C. Another version
- * is for sensors read with adc
+ * This version of code should be used for sensors read with ADC. Another version
+ * is for sensors read with I2C
  *
- * UART Pins: P1.1(RXD) P1.2(TXD)
- * I2C pin: P1.6(SCL) P1.7(SDA)
  * UART Pins: P1.1(RXD) P1.2(TXD)
  * GPIO pin to tell Xbee to wake up: P2.5
  * GPIO pin to receive from Xbee when RF transmission is complete: P2.2
  * Debug LED pin: P2.0
+ * ADC pin: P1.4 (A4)
  *
  * Timer used: TA1.1 on P2.1
  *
@@ -28,13 +27,14 @@
  *6. After ready signal is received from Xbee, MCU puts Xbee to sleep through pin P2.5 and goes to sleep mode itself
  *
  * UART Byte sequence:
+ * UART communication speed is 1200 - to minimize TX errors
  * To send data over UART, first byte will the the total number of bytes sent during transmission, not including this byte
  * second byte will be identification - which sensor data is sent. The choices are:
  * 0x01 - Temperature
  * 0x02 - humidity
  * 0x03 - sunlight
- * 0x04 = UV
- * 0x05 = IR
+ * 0x04 - UV
+ * 0x05 - IR
  * 0x06 - TDS
  *
  * two subsequent bytes will be actual data. first byte is MSB, and second byte is LSB
@@ -48,8 +48,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include "temp_sensor.h"
-#include "sunlight_sensor.h"
+#include "comm.h"
 #include "port_and_clock.h"
 #include "adc.h"
 
@@ -62,55 +61,33 @@ void main(void)
 {
     clock_init();
     port_init();
-    I2C_init();
     adc_init();
     UART_init();
     timer_init();
     __enable_interrupt(); //Enable interrupts
 
-    P2IFG &= ~BIT5; //clear interrupt
+    P1DIR |= BIT6;
 
-    temp_hum_soft_reset();
-    reset_sunlight_sensor();
-    configure_sunlight_sensor();
-    __delay_cycles(COMM_WAIT_TIME);
+    P2IFG &= ~BIT5; //clear interrupt
 
     while (1)
     {
+        P1OUT ^= BIT6;
         P2DIR |= BIT5; //switch to output to wake up Xbee
         P2OUT &= ~BIT5; //output low to pull sleep pin down
 
         uint8_t data_buf[17] = { 0 };
 
-         uint16_t temp_data = get_temperature();
          data_buf[0] = 0xFF; //frame header
-         data_buf[1] = 17; //Total bytes that will be send
-         data_buf[2] = TEMP;
-         data_buf[3] = temp_data >> 8;
-         data_buf[4] = temp_data & 0xFF;
-
-         uint16_t hum_data = get_humidity();
-         data_buf[5] = HUM;
-         data_buf[6] = hum_data >> 8;
-         data_buf[7] = hum_data & 0xFF;
-
-         uint16_t vis_data = read_sunlight_VIS();
-         data_buf[8] = VIS;
-         data_buf[9] = vis_data >> 8;
-         data_buf[10] = vis_data & 0xFF;
-
-         uint16_t uv_data = read_sunlight_UV();
-         data_buf[11] = UV;
-         data_buf[12] = uv_data >> 8;
-         data_buf[13] = uv_data & 0xFF;
+         data_buf[1] = 5; //Total bytes that will be send
 
         trigger_adc();
 
         while (ADC10CTL1 & ADC10BUSY);
 
-        data_buf[14] = TDS;
-        data_buf[15] = ADC_value >> 8;
-        data_buf[16] = ADC_value & 0xFF;
+        data_buf[2] = TDS;
+        data_buf[3] = ADC_value >> 8;
+        data_buf[4] = ADC_value & 0xFF;
 
         ADC_value = 0; //reset variable
         send_to_UART(data_buf, data_buf[1]); //send to UART
@@ -119,7 +96,8 @@ void main(void)
         P2DIR &= ~BIT5; //switch back to input again
 
         //P2OUT &= ~BIT0; //LED OFF
-        LPM0; //go to low power mode
+
+        LPM3; //go to low power mode
     }
 }
 
@@ -130,7 +108,7 @@ void main(void)
 __interrupt void ADC10_ISR(void)
 {
     ADC_value = ADC10MEM; //obtain ADC value from MEM buffer
-    LPM0_EXIT;
+    LPM3_EXIT;
 
 #ifdef DEBUG_MODE
     //The code segment below is just for debugging purpose
@@ -149,7 +127,7 @@ __interrupt void ADC10_ISR(void)
 #pragma vector = USCIAB0TX_VECTOR
 __interrupt void USCIAB0TX_ISR(void)
 {
-    P2OUT |= BIT0;
+    //P2OUT |= BIT0;
     if (IFG2 & UCB0RXIFG)                 // Receive Data Interrupt
     {
         //Must read from UCB0RXBUF
@@ -220,6 +198,7 @@ __interrupt void USCIAB0TX_ISR(void)
     }
     if ((IFG2 & UCA0TXIFG)) //UART byte TXIFG (IE2 & UCA0TXIE)
     {
+        P2OUT |= BIT0;
         if (UART_byte_count == 0)
         {
             UART_byte_count++;
@@ -239,7 +218,7 @@ __interrupt void USCIAB0TX_ISR(void)
         else
             IFG2 &= ~UCA0TXIFG;
     }
-    P2OUT &= ~BIT0;
+    //P2OUT &= ~BIT0;
 }
 
 //******************************************************************************
@@ -271,13 +250,12 @@ void USCIAB0RX_ISR(void)
 __interrupt
 void TIMER_ISR(void)
 {
-    current_count++; //increment count
+    current_count++;
     if (current_count == count_period)
     {
-        LPM0_EXIT; //exit LPM4
+        LPM3_EXIT; //exit LPM3
         current_count = 0; //reset count to 0
     }
-
     TA1CTL &= ~TAIFG; //clear interrupt
     P2OUT &= ~BIT5; //reset trigger pin
 }
