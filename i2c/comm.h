@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 
 #define MAX_BUFFER_SIZE 32
 #define COMM_WAIT_TIME 5000
@@ -34,7 +35,8 @@ typedef enum Data_TypeEnum{
     VIS = 3,
     UV = 4,
     IR = 5,
-    TDS = 6
+    TDS = 6,
+    H2OLEVEL = 7
 } Data_Type;
 
 volatile I2C_Mode MasterMode;

@@ -70,15 +70,14 @@ void I2C_receive_msg_no_cmd(uint8_t addr, uint8_t count, uint8_t* receive_buffer
        IFG2 &= ~(UCB0TXIFG + UCB0RXIFG);       // Clear any pending interrupts
        IE2 |= UCB0RXIE;       // Enable RX interrupt
        IE2 &= ~UCB0TXIE;       // Disable TX interrupt
-       UCB0I2CIE|=UCNACKIE;    //enable NACK interrupt
+       //UCB0I2CIE|=UCNACKIE;    //enable NACK interrupt
 
        //bit 1: UCTXSTT - transmit START condition in master mode
        //bit 4: UCTR - Transmitter/receiver. 1 = transmitter, 0 = receiver
        UCB0CTL1 &= ~BIT4;
        UCB0CTL1 |= BIT1;    //Start transmission
-       while (UCB0STAT & UCBBUSY)
-           ;
-       memset (receive_buffer, ReceiveBuffer, count);
+       while (MasterMode != IDLE_MODE); //when mastermode changes to idle, this means transmission is over
+       memcpy (receive_buffer, ReceiveBuffer, count);
 }
 
 void I2C_send_byte(uint8_t addr, uint8_t cmd, uint8_t data_to_send)

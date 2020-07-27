@@ -58,23 +58,17 @@
  * main.c
  */
 
-static volatile uint16_t ADC_value = 0;
-
 void main(void)
 {
     clock_init();
     port_init();
     I2C_init();
-    adc_init();
     UART_init();
     timer_init();
     __enable_interrupt(); //Enable interrupts
 
     P2IFG &= ~BIT5; //clear interrupt
 
-    temp_hum_soft_reset();
-    reset_sunlight_sensor();
-   configure_sunlight_sensor();
     __delay_cycles(COMM_WAIT_TIME);
 
     while (1)
@@ -82,73 +76,20 @@ void main(void)
         P2DIR |= BIT5; //switch to output to wake up Xbee
         P2OUT &= ~BIT5; //output low to pull sleep pin down
 
-        uint8_t data_buf[17] = { 0 };
+        uint8_t data_buf[4] = { 0 };
+        data_buf[0] = 0xFF; //frame start char
 
-         uint16_t temp_data = get_temperature();
-         data_buf[0] = 0xFF; //frame header
-         data_buf[1] = 17; //Total bytes that will be send
-         data_buf[2] = TEMP;
-         data_buf[3] = temp_data >> 8;
-         data_buf[4] = temp_data & 0xFF;
+        data_buf[1] = H2OLEVEL;
+        data_buf[2] = obtain_water_level_mm();
+        data_buf[3] = 0xEE; //frame end char
 
-         uint16_t hum_data = get_humidity();
-         data_buf[5] = HUM;
-         data_buf[6] = hum_data >> 8;
-         data_buf[7] = hum_data & 0xFF;
-
-         uint16_t vis_data = read_sunlight_VIS();
-         data_buf[8] = VIS;
-         data_buf[9] = vis_data >> 8;
-         data_buf[10] = vis_data & 0xFF;
-
-         uint16_t uv_data = read_sunlight_UV();
-         data_buf[11] = UV;
-         data_buf[12] = uv_data >> 8;
-         data_buf[13] = uv_data & 0xFF;
-
-        /*trigger_adc();
-
-        while (ADC10CTL1 & ADC10BUSY);
-
-        data_buf[14] = TDS;
-        data_buf[15] = ADC_value >> 8;
-        data_buf[16] = ADC_value & 0xFF;
-
-        ADC_value = 0; //reset variable
-        send_to_UART(data_buf, data_buf[1]); //send to UART */
+        send_to_UART(data_buf, 4); //send to UART lower 8 bytes
 
         // while (P2IN & BIT2); //wait for Xbee to Signal ready on pin P2.2
-        P2DIR &= ~BIT5; //switch back to input again
-
+        //P2DIR &= ~BIT5; //switch back to input again
         P2OUT ^= BIT0; //LED Toggle
-
-        //uint8_t data_buf[20] = { 0 };
-
-        //getHigh12SectionValue(data_buf, 12);
-        //getLow8SectionValue(data_buf, 8);
-
         LPM0; //go to low power mode
     }
-}
-
-//******************************************************************************
-// ADC10 interrupt service routine
-//******************************************************************************
-#pragma vector=ADC10_VECTOR
-__interrupt void ADC10_ISR(void)
-{
-    ADC_value = ADC10MEM; //obtain ADC value from MEM buffer
-    LPM0_EXIT;
-
-#ifdef DEBUG_MODE
-    //The code segment below is just for debugging purpose
-    //No float conversion will be done in MSP430
-    float adc_voltage = ((float) adc_value) * 3.3 / 1024.0;
-    if (adc_voltage > 2)
-    P1OUT |= BIT6;//Turn on on-board led
-    else
-    P1OUT &= ~BIT6;//Turn off on-board led
-#endif
 }
 
 //******************************************************************************
