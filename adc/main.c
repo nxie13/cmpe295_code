@@ -36,6 +36,7 @@
  * 0x04 - UV
  * 0x05 - IR
  * 0x06 - TDS
+ * 0x07 - water level sensor
  *
  * two subsequent bytes will be actual data. first byte is MSB, and second byte is LSB
  *
@@ -78,22 +79,29 @@ void main(void)
 
         uint8_t data_buf[17] = { 0 };
 
-         data_buf[0] = 0xFF; //frame header
-         data_buf[1] = 5; //Total bytes that will be send
+        data_buf[0] = 0xFF; //frame header
 
         trigger_adc();
 
         while (ADC10CTL1 & ADC10BUSY);
 
-        data_buf[2] = TDS;
-        data_buf[3] = ADC_value >> 8;
-        data_buf[4] = ADC_value & 0xFF;
+        data_buf[1] = TDS;
+        data_buf[2] = ADC_value >> 8;
+        data_buf[3] = ADC_value & 0xFF;
+
+        /*data_buf[4] = VIS;
+        data_buf[5] = 0x1;
+        data_buf[6] = 0x2;
+        data_buf[7] = 0xEE; //frame end char*/
+        data_buf[4] = 0xEE; //frame end char
 
         ADC_value = 0; //reset variable
-        send_to_UART(data_buf, data_buf[1]); //send to UART
+        send_to_UART(data_buf, 5); //send to UART
 
         // while (P2IN & BIT2); //wait for Xbee to Signal ready on pin P2.2
-        P2DIR &= ~BIT5; //switch back to input again
+        //P2DIR &= ~BIT5; //switch back to input again
+        __delay_cycles(32000); //wait for xbee
+        P2OUT |= BIT5; //output high to sleep pin
 
         //P2OUT &= ~BIT0; //LED OFF
 

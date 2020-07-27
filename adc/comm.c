@@ -59,6 +59,29 @@ uint16_t I2C_receive_msg(uint8_t addr, uint8_t cmd, uint8_t count)
     return ReceiveBuffer[0] << 8 | ReceiveBuffer[1]; //[0] MSB, [1] LSB
 }
 
+void I2C_receive_msg_no_cmd(uint8_t addr, uint8_t count, uint8_t* receive_buffer)
+{
+    /* Initialize state machine */
+       MasterMode = SWITCH_TO_RX_MODE;
+       RXByteCtr = count;
+       TXByteCtr = 0;
+       ReceiveIndex = 0;
+       TransmitIndex = 0;
+
+       /* Initialize slave address and interrupts */
+       UCB0I2CSA = addr;
+       IFG2 &= ~(UCB0TXIFG + UCB0RXIFG);       // Clear any pending interrupts
+       IE2 &= ~UCB0RXIE;       // Disable RX interrupt
+       IE2 |= UCB0TXIE;       // Enable TX interrupt
+
+       //bit 1: UCTXSTT - transmit START condition in master mode
+       //bit 4: UCTR - Transmitter/receiver. 1 = transmitter
+       UCB0CTL1 |= BIT1 | BIT4;    //Start transmission
+       while (UCB0STAT & UCBBUSY)
+           ;
+       memcpy(receive_buffer, ReceiveBuffer, count);
+}
+
 void I2C_send_byte(uint8_t addr, uint8_t cmd, uint8_t data_to_send)
 {
     uint8_t reg_data[2] = { data_to_send, 0 };
