@@ -41,7 +41,7 @@ void clock_init(void)
     WDTCTL = WDTPW | WDTHOLD;       // Stop watchdog timer
 
     //clock source: DCOCLK, 1MHz
-    //clock signal: SMCLK, divider = 8 1MHz / 8 = 125kHz
+    //clock signal: SMCLK, divider = 1
 
     //load DCO calibration data from TLV
     if (CALBC1_16MHZ == 0xFF)                  // If calibration constant erased
@@ -52,26 +52,51 @@ void clock_init(void)
     DCOCTL = 0;                          // Select lowest DCOx and MODx settings
     BCSCTL1 = CALBC1_1MHZ;                    // Set DCO calibration
     DCOCTL = CALDCO_1MHZ;
-    BCSCTL2 = DIVS_3;                     //divider = 8
+    //BCSCTL2 = DIVS_3;                     //divider = 8
+
+    //clock source:VLOCLK, 12kHz
+    //clock signal: ACLK, divider = 8, 12k / 8 = 1500Hz
+    BCSCTL1 |= DIVA_3;
+    BCSCTL3 = LFXT1S_2;
 }
 
 void timer_init(void)
 {
+    /*
+     //TACTL configuration:
+     //clock source select: SMCLK
+     //clock divider: 8. 1MHz / 8 = 15625Hz
+     //count mode: up mode
+     //interrupt enable
+     uint16_t timer_control_bits = TASSEL_2 | ID_3 | MC_1 | TAIE;
+     TA1CTL = timer_control_bits;
+
+     //this will make the frequency of interrupt 0.25Hz (every 4 seconds) (slowest possible)
+     TA1CCR0 = 62500;
+
+     //initialize variable to further divide up time
+     current_count = 0;
+
+     //calculate count period value to further slow down sensor sampling frequency
+     count_period = SAMPLING_PERIOD / 4;*/
+
     //TACTL configuration:
-    //clock source select: SMCLK
-    //clock divider: 8. 125KHz / 8 = 15625Hz
+    //clock source select: ACLK
+    //clock divider: 8. 1500 / 8 = 187.5Hz
     //count mode: up mode
     //interrupt enable
-    uint16_t timer_control_bits = TASSEL_2 | ID_3 | MC_1 | TAIE;
+    uint16_t timer_control_bits = TASSEL_1 | ID_3 | MC_1 | TAIE;
     TA1CTL = timer_control_bits;
 
-    //this will make the frequency of interrupt 0.25Hz (every 4 seconds) (slowest possible)
-    TA1CCR0 = 62500;
+    //this will make the frequency of interrupt every 300 seconds or 5 minutes (slowest whole number possible)
+    //TA1CCR0 = 56250;
+    TA1CCR0 = 750; //for debug purpose
 
     //initialize variable to further divide up time
     current_count = 0;
 
     //calculate count period value to further slow down sensor sampling frequency
-    count_period = SAMPLING_PERIOD / 4;
+    //count_period = SAMPLING_PERIOD / 300;
+    count_period = SAMPLING_PERIOD / 4; //for debug purpose
 }
 

@@ -57,6 +57,7 @@ void UART_init(void);
 //i2c functions
 void I2C_send_msg(uint8_t addr, uint8_t cmd, uint8_t *reg_data, uint8_t count);
 uint16_t I2C_receive_msg(uint8_t addr, uint8_t cmd, uint8_t count);
+void I2C_receive_msg_no_cmd(uint8_t addr, uint8_t count, uint8_t* receive_buffer);
 void I2C_send_byte(uint8_t addr, uint8_t cmd, uint8_t data_to_send);
 
 void send_to_UART_per_sensor(Data_Type which_data, uint16_t data_to_send);

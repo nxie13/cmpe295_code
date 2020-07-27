@@ -59,6 +59,28 @@ uint16_t I2C_receive_msg(uint8_t addr, uint8_t cmd, uint8_t count)
     return ReceiveBuffer[0] << 8 | ReceiveBuffer[1]; //[0] MSB, [1] LSB
 }
 
+void I2C_receive_msg_no_cmd(uint8_t addr, uint8_t count, uint8_t* receive_buffer)
+{
+       //Initialize required values
+       RXByteCtr = count;
+       ReceiveIndex = 0;
+
+       /* Initialize slave address and interrupts */
+       UCB0I2CSA = addr;
+       IFG2 &= ~(UCB0TXIFG + UCB0RXIFG);       // Clear any pending interrupts
+       IE2 |= UCB0RXIE;       // Enable RX interrupt
+       IE2 &= ~UCB0TXIE;       // Disable TX interrupt
+       UCB0I2CIE|=UCNACKIE;    //enable NACK interrupt
+
+       //bit 1: UCTXSTT - transmit START condition in master mode
+       //bit 4: UCTR - Transmitter/receiver. 1 = transmitter, 0 = receiver
+       UCB0CTL1 &= ~BIT4;
+       UCB0CTL1 |= BIT1;    //Start transmission
+       while (UCB0STAT & UCBBUSY)
+           ;
+       memset (receive_buffer, ReceiveBuffer, count);
+}
+
 void I2C_send_byte(uint8_t addr, uint8_t cmd, uint8_t data_to_send)
 {
     uint8_t reg_data[2] = { data_to_send, 0 };
@@ -150,8 +172,8 @@ void UART_init(void)
     UCA0CTL1 = uart_CTL1_value;
 
     //baud rate configuration (check with xbee ->9600bps)
-    /* N = f(BRCLK)/Baud rate, f(BRCLK) = 125KHz, baud rate is 9600bps. N = 13.02
-     * low freq. mode, UCBRx = INT(N) = 13, UCBRSx = 0x1, UCOS16 = 0
+    /* N = f(BRCLK)/Baud rate, f(BRCLK) = 1MHz, baud rate is 9600bps. N = 104.17
+     * low freq. mode, UCBRx = INT(N) = 104, UCBRSx = 0x1, UCOS16 = 0
      */
     UCA0BR0 = 13;
     UCA0BR1 = 0;

@@ -52,12 +52,14 @@
 #include "sunlight_sensor.h"
 #include "port_and_clock.h"
 #include "adc.h"
+#include "water_level_sensor.h"
 
 /**
  * main.c
  */
 
 static volatile uint16_t ADC_value = 0;
+
 void main(void)
 {
     clock_init();
@@ -72,7 +74,7 @@ void main(void)
 
     temp_hum_soft_reset();
     reset_sunlight_sensor();
-    configure_sunlight_sensor();
+   configure_sunlight_sensor();
     __delay_cycles(COMM_WAIT_TIME);
 
     while (1)
@@ -104,7 +106,7 @@ void main(void)
          data_buf[12] = uv_data >> 8;
          data_buf[13] = uv_data & 0xFF;
 
-        trigger_adc();
+        /*trigger_adc();
 
         while (ADC10CTL1 & ADC10BUSY);
 
@@ -113,12 +115,18 @@ void main(void)
         data_buf[16] = ADC_value & 0xFF;
 
         ADC_value = 0; //reset variable
-        send_to_UART(data_buf, data_buf[1]); //send to UART
+        send_to_UART(data_buf, data_buf[1]); //send to UART */
 
         // while (P2IN & BIT2); //wait for Xbee to Signal ready on pin P2.2
         P2DIR &= ~BIT5; //switch back to input again
 
-        //P2OUT &= ~BIT0; //LED OFF
+        P2OUT ^= BIT0; //LED Toggle
+
+        //uint8_t data_buf[20] = { 0 };
+
+        //getHigh12SectionValue(data_buf, 12);
+        //getLow8SectionValue(data_buf, 8);
+
         LPM0; //go to low power mode
     }
 }
@@ -149,7 +157,7 @@ __interrupt void ADC10_ISR(void)
 #pragma vector = USCIAB0TX_VECTOR
 __interrupt void USCIAB0TX_ISR(void)
 {
-    P2OUT |= BIT0;
+    //P2OUT |= BIT0;
     if (IFG2 & UCB0RXIFG)                 // Receive Data Interrupt
     {
         //Must read from UCB0RXBUF
@@ -239,7 +247,7 @@ __interrupt void USCIAB0TX_ISR(void)
         else
             IFG2 &= ~UCA0TXIFG;
     }
-    P2OUT &= ~BIT0;
+    //P2OUT &= ~BIT0;
 }
 
 //******************************************************************************
@@ -274,7 +282,7 @@ void TIMER_ISR(void)
     current_count++; //increment count
     if (current_count == count_period)
     {
-        LPM0_EXIT; //exit LPM4
+        LPM0_EXIT; //exit LPM0
         current_count = 0; //reset count to 0
     }
 
