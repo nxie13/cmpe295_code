@@ -100,9 +100,10 @@ void main(void)
 
         char char_buf[16] = {0};
         sensor_output_uint_to_char(TDS, ADC_value, char_buf);
-        int buf_size = strlen(char_buf);
+        int buf_size = strlen(char_buf) + 1; //include the '\0' character
 
-       // send_to_UART(data_buf, 5); //send to UART
+        //int buf_size = 6;
+
         send_to_UART(char_buf, buf_size); //send to UART
 
         ADC_value = 0; //reset variable
@@ -291,11 +292,12 @@ void sensor_output_uint_to_char(Data_Type sensor_type, uint16_t sensor_value, ch
         break;
     }
     //sensor value: no more than 10 chars, including '\0'
-    unsigned int sensor_value_int = (unsigned int)sensor_value;
+    //unsigned int sensor_value_int = (unsigned int)sensor_value;
+    unsigned int sensor_value_int = 123;
     char temp_buffer[10];
-    itoa(sensor_value, temp_buffer);
+    itoa(sensor_value_int, temp_buffer);
     //sprintf(temp_buffer, "%d", sensor_value_int);
-    memcpy(arr[4], temp_buffer, strlen(temp_buffer));
+    memcpy(&arr[4], temp_buffer, strlen(temp_buffer));
 }
 
 //itoa:  convert n to characters in s
