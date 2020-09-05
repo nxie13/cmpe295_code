@@ -49,6 +49,8 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
 #include "comm.h"
 #include "port_and_clock.h"
 #include "adc.h"
@@ -56,6 +58,8 @@
 /**
  * main.c
  */
+
+void sensor_output_uint_to_char(Data_Type sensor_type, uint16_t sensor_value, char arr[]);
 
 static volatile uint16_t ADC_value = 0;
 void main(void)
@@ -79,24 +83,29 @@ void main(void)
 
         uint8_t data_buf[17] = { 0 };
 
-        data_buf[0] = 0xFF; //frame header
-
         trigger_adc();
 
         while (ADC10CTL1 & ADC10BUSY);
 
+        /*data_buf[0] = 0xFF; //frame header
         data_buf[1] = TDS;
         data_buf[2] = ADC_value >> 8;
-        data_buf[3] = ADC_value & 0xFF;
+        data_buf[3] = ADC_value & 0xFF;*/
 
         /*data_buf[4] = VIS;
         data_buf[5] = 0x1;
         data_buf[6] = 0x2;
-        data_buf[7] = 0xEE; //frame end char*/
-        data_buf[4] = 0xEE; //frame end char
+        data_buf[7] = 0xEE; //frame end char
+        data_buf[4] = 0xEE; //frame end char*/
+
+        char char_buf[16] = {0};
+        sensor_output_uint_to_char(TDS, ADC_value, char_buf);
+        int buf_size = strlen(char_buf);
+
+       // send_to_UART(data_buf, 5); //send to UART
+        send_to_UART(char_buf, buf_size); //send to UART
 
         ADC_value = 0; //reset variable
-        send_to_UART(data_buf, 5); //send to UART
 
         // while (P2IN & BIT2); //wait for Xbee to Signal ready on pin P2.2
         //P2DIR &= ~BIT5; //switch back to input again
@@ -268,3 +277,52 @@ void TIMER_ISR(void)
     P2OUT &= ~BIT5; //reset trigger pin
 }
 
+//this function turns unsigned int to character for xbee transmission
+void sensor_output_uint_to_char(Data_Type sensor_type, uint16_t sensor_value, char arr[])
+{
+    switch (sensor_type)
+    {
+    case TDS:
+        //sensor header: no more than 6 chars
+        arr[0] = 'T';
+        arr[1] = 'D';
+        arr[2] = 'S';
+        arr[3] = ':';
+        break;
+    }
+    //sensor value: no more than 10 chars, including '\0'
+    unsigned int sensor_value_int = (unsigned int)sensor_value;
+    char temp_buffer[10];
+    itoa(sensor_value, temp_buffer);
+    //sprintf(temp_buffer, "%d", sensor_value_int);
+    memcpy(arr[4], temp_buffer, strlen(temp_buffer));
+}
+
+//itoa:  convert n to characters in s
+ void itoa(int n, char s[])
+ {
+     int i, sign;
+
+     if ((sign = n) < 0)  //record sign
+         n = -n;          //make n positive
+     i = 0;
+     do {       //generate digits in reverse order
+         s[i++] = n % 10 + '0';   //get next digit
+     } while ((n /= 10) > 0);     //delete it
+     if (sign < 0)
+         s[i++] = '-';
+     s[i] = '\0';
+     reverse(s);
+ }
+
+  void reverse(char s[])
+  {
+      int i, j;
+      char c;
+
+      for (i = 0, j = strlen(s)-1; i<j; i++, j--) {
+          c = s[i];
+          s[i] = s[j];
+          s[j] = c;
+      }
+  }
