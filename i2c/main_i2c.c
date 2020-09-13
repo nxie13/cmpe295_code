@@ -68,26 +68,25 @@ void main(void)
     __enable_interrupt(); //Enable interrupts
 
     P2IFG &= ~BIT5; //clear interrupt
+    P2DIR |= BIT5; //switch to output for waking up Xbee
 
     __delay_cycles(COMM_WAIT_TIME);
 
     while (1)
     {
-        P2DIR |= BIT5; //switch to output to wake up Xbee
         P2OUT &= ~BIT5; //output low to pull sleep pin down
 
-        uint8_t data_buf[4] = { 0 };
-        data_buf[0] = 0xFF; //frame start char
+        char char_buf[16] = { 0 };
+        uint16_t sensor_value = obtain_water_level_mm();
+        sensor_output_uint_to_char(H2OLEVEL, sensor_value, char_buf);
+        int buf_size = strlen(char_buf) + 1; //include the '\0' character
 
-        data_buf[1] = H2OLEVEL;
-        data_buf[2] = obtain_water_level_mm();
-        data_buf[3] = 0xEE; //frame end char
+        send_to_UART(char_buf, buf_size); //send to UART
+        __delay_cycles(32000); //wait for xbee
 
-        send_to_UART(data_buf, 4); //send to UART lower 8 bytes
-
-        // while (P2IN & BIT2); //wait for Xbee to Signal ready on pin P2.2
+        P2OUT |= BIT5; //output high to pull sleep pin up
         //P2DIR &= ~BIT5; //switch back to input again
-        P2OUT ^= BIT0; //LED Toggle
+        //P2OUT ^= BIT0; //LED Toggle
         LPM0; //go to low power mode
     }
 }
@@ -228,6 +227,76 @@ void TIMER_ISR(void)
     }
 
     TA1CTL &= ~TAIFG; //clear interrupt
-    P2OUT &= ~BIT5; //reset trigger pin
+    //P2OUT &= ~BIT5; //reset trigger pin
+}
+
+//this function turns unsigned int to character for xbee transmission
+void sensor_output_uint_to_char(Data_Type sensor_type, uint16_t sensor_value,
+                                char arr[])
+{
+    switch (sensor_type)
+    {
+    case TDS:
+        arr[0] = 'T';
+        arr[1] = 'D';
+        arr[2] = 'S';
+        arr[3] = ':';
+        break;
+    case H2OLEVEL:
+        arr[0] = 'L';
+        arr[1] = 'V';
+        arr[2] = 'L';
+        arr[3] = ':';
+        break;
+    case SOILMOISTURE:
+        arr[0] = 'M';
+        arr[1] = 'O';
+        arr[2] = 'I';
+        arr[3] = ':';
+        break;
+    case TURBIDITY:
+        arr[0] = 'T';
+        arr[1] = 'U';
+        arr[2] = 'R';
+        arr[3] = ':';
+        break;
+    }
+    //sensor value: no more than 10 chars, including '\0'
+    unsigned int sensor_value_int = (unsigned int)sensor_value;
+    char temp_buffer[10];
+    itoa(sensor_value_int, temp_buffer);
+    memcpy(&arr[4], temp_buffer, strlen(temp_buffer));
+}
+
+//itoa:  convert n to characters in s
+void itoa(int n, char s[])
+{
+    int i, sign;
+
+    if ((sign = n) < 0)  //record sign
+        n = -n;          //make n positive
+    i = 0;
+    do
+    {       //generate digits in reverse order
+        s[i++] = n % 10 + '0';   //get next digit
+    }
+    while ((n /= 10) > 0);     //delete it
+    if (sign < 0)
+        s[i++] = '-';
+    s[i] = '\0';
+    reverse(s);
+}
+
+void reverse(char s[])
+{
+    int i, j;
+    char c;
+
+    for (i = 0, j = strlen(s) - 1; i < j; i++, j--)
+    {
+        c = s[i];
+        s[i] = s[j];
+        s[j] = c;
+    }
 }
 

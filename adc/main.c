@@ -87,15 +87,6 @@ void main(void)
 
         while (ADC10CTL1 & ADC10BUSY);
 
-        /*data_buf[0] = 0xFF; //frame header
-        data_buf[1] = TDS;
-        data_buf[2] = ADC_value >> 8;
-        data_buf[3] = ADC_value & 0xFF;*/
-
-        /*data_buf[4] = VIS;
-        data_buf[5] = 0x1;
-        data_buf[6] = 0x2;
-        data_buf[7] = 0xEE; //frame end char
         data_buf[4] = 0xEE; //frame end char*/
 
         char char_buf[16] = {0};
@@ -275,7 +266,7 @@ void TIMER_ISR(void)
         current_count = 0; //reset count to 0
     }
     TA1CTL &= ~TAIFG; //clear interrupt
-    P2OUT &= ~BIT5; //reset trigger pin
+    //P2OUT &= ~BIT5; //reset trigger pin
 }
 
 //this function turns unsigned int to character for xbee transmission
@@ -284,12 +275,29 @@ void sensor_output_uint_to_char(Data_Type sensor_type, uint16_t sensor_value, ch
     switch (sensor_type)
     {
     case TDS:
-        //sensor header: no more than 6 chars
-        arr[0] = 'T';
-        arr[1] = 'D';
-        arr[2] = 'S';
-        arr[3] = ':';
-        break;
+            arr[0] = 'T';
+            arr[1] = 'D';
+            arr[2] = 'S';
+            arr[3] = ':';
+            break;
+        case H20LEVEL:
+            arr[0] = 'L';
+            arr[1] = 'V';
+            arr[2] = 'L';
+            arr[3] = ':';
+            break;
+        case SOILMOISTURE:
+            arr[0] = 'M';
+            arr[1] = 'O';
+            arr[2] = 'I';
+            arr[3] = ':';
+            break;
+        case TURBIDITY:
+            arr[0] = 'T';
+            arr[1] = 'U';
+            arr[2] = 'R';
+            arr[3] = ':';
+            break;
     }
     //sensor value: no more than 10 chars, including '\0'
     //unsigned int sensor_value_int = (unsigned int)sensor_value;

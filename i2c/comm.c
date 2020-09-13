@@ -6,7 +6,7 @@
  *      Reference: MSP430G2xx3 Demo - USCI_B0, I2C Master multiple byte TX/RX
  */
 
-#include <comm.h>
+#include "comm.h"
 
 void I2C_send_msg(uint8_t addr, uint8_t cmd, uint8_t *reg_data, uint8_t count)
 {
@@ -170,13 +170,13 @@ void UART_init(void)
     uart_CTL1_value = BIT7 | BIT0; //bit7 set and bit6 reset = SMCLK
     UCA0CTL1 = uart_CTL1_value;
 
-    //baud rate configuration (check with xbee ->9600bps)
-    /* N = f(BRCLK)/Baud rate, f(BRCLK) = 1MHz, baud rate is 9600bps. N = 104.17
-     * low freq. mode, UCBRx = INT(N) = 104, UCBRSx = 0x1, UCOS16 = 0
+    //baud rate configuration (check with xbee ->1200bps)
+    /* N = f(BRCLK)/Baud rate, f(BRCLK) = 1MHz, baud rate is 1200bps. N = 833.33
+     * low freq. mode, UCBRx = INT(N) = 833, UCBRSx = 0x2, UCOS16 = 0
      */
-    UCA0BR0 = 13;
-    UCA0BR1 = 0;
-    UCA0MCTL = 0x1 << 1;
+    UCA0BR0 = 833 & 0xff;
+    UCA0BR1 = 833 >> 8;
+    UCA0MCTL = 0x2 << 1;
 
     //Port Configuration TX and RX
     P1SEL |= BIT1 | BIT2; //TX: P1.2. RX: P1.1
