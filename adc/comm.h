@@ -35,7 +35,8 @@ typedef enum Data_TypeEnum{
     UV = 4,
     IR = 5,
     TDS = 6,
-    H20LEVEL = 7
+    H20LEVEL = 7,
+    SOILMOISTURE = 8
 } Data_Type;
 
 volatile I2C_Mode MasterMode;

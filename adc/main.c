@@ -87,29 +87,16 @@ void main(void)
 
         while (ADC10CTL1 & ADC10BUSY);
 
-        /*data_buf[0] = 0xFF; //frame header
-        data_buf[1] = TDS;
-        data_buf[2] = ADC_value >> 8;
-        data_buf[3] = ADC_value & 0xFF;*/
-
-        /*data_buf[4] = VIS;
-        data_buf[5] = 0x1;
-        data_buf[6] = 0x2;
-        data_buf[7] = 0xEE; //frame end char
-        data_buf[4] = 0xEE; //frame end char*/
-
         char char_buf[16] = {0};
         sensor_output_uint_to_char(TDS, ADC_value, char_buf);
         int buf_size = strlen(char_buf) + 1; //include the '\0' character
-
-        //int buf_size = 6;
 
         send_to_UART(char_buf, buf_size); //send to UART
 
         ADC_value = 0; //reset variable
 
-        // while (P2IN & BIT2); //wait for Xbee to Signal ready on pin P2.2
-        //P2DIR &= ~BIT5; //switch back to input again
+        //while (P2IN & BIT2); //wait for Xbee to Signal ready on pin P2.2
+        P2DIR &= ~BIT5; //switch back to input again
         __delay_cycles(32000); //wait for xbee
         P2OUT |= BIT5; //output high to sleep pin
 
@@ -216,7 +203,7 @@ __interrupt void USCIAB0TX_ISR(void)
     }
     if ((IFG2 & UCA0TXIFG)) //UART byte TXIFG (IE2 & UCA0TXIE)
     {
-        P2OUT |= BIT0;
+        //P2OUT |= BIT0;
         if (UART_byte_count == 0)
         {
             UART_byte_count++;
@@ -284,19 +271,29 @@ void sensor_output_uint_to_char(Data_Type sensor_type, uint16_t sensor_value, ch
     switch (sensor_type)
     {
     case TDS:
-        //sensor header: no more than 6 chars
         arr[0] = 'T';
         arr[1] = 'D';
         arr[2] = 'S';
         arr[3] = ':';
         break;
-    }
+    case H20LEVEL:
+        arr[0] = 'L';
+        arr[1] = 'V';
+        arr[2] = 'L';
+        arr[3] = ':';
+        break;
+    case SOILMOISTURE:
+        arr[0] = 'M';
+        arr[1] = 'O';
+        arr[2] = 'I';
+        arr[3] = ':';
+        break;
+}
     //sensor value: no more than 10 chars, including '\0'
-    //unsigned int sensor_value_int = (unsigned int)sensor_value;
-    unsigned int sensor_value_int = 123;
+    unsigned int sensor_value_int = (unsigned int)sensor_value;
+    //unsigned int sensor_value_int = 123;
     char temp_buffer[10];
     itoa(sensor_value_int, temp_buffer);
-    //sprintf(temp_buffer, "%d", sensor_value_int);
     memcpy(&arr[4], temp_buffer, strlen(temp_buffer));
 }
 
