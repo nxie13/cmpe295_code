@@ -89,7 +89,7 @@ void main(void)
         send_to_UART(char_buf, buf_size); //send to UART
         ADC_value = 0; //reset variable
 
-        __delay_cycles(3000); //wait for xbee
+        __delay_cycles(1000); //wait for xbee
         P2OUT |= BIT5; //output high to sleep pin
 
         //P2OUT &= ~BIT0; //LED OFF
