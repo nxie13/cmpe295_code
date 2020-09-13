@@ -81,14 +81,12 @@ void main(void)
         P2DIR |= BIT5; //switch to output to wake up Xbee
         P2OUT &= ~BIT5; //output low to pull sleep pin down
 
-        uint8_t data_buf[17] = { 0 };
-
         trigger_adc();
 
         while (ADC10CTL1 & ADC10BUSY);
 
         char char_buf[16] = {0};
-        sensor_output_uint_to_char(TDS, ADC_value, char_buf);
+        sensor_output_uint_to_char(TURBIDITY, ADC_value, char_buf);
         int buf_size = strlen(char_buf) + 1; //include the '\0' character
 
         send_to_UART(char_buf, buf_size); //send to UART
@@ -286,6 +284,12 @@ void sensor_output_uint_to_char(Data_Type sensor_type, uint16_t sensor_value, ch
         arr[0] = 'M';
         arr[1] = 'O';
         arr[2] = 'I';
+        arr[3] = ':';
+        break;
+    case TURBIDITY:
+        arr[0] = 'T';
+        arr[1] = 'U';
+        arr[2] = 'R';
         arr[3] = ':';
         break;
 }
