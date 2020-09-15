@@ -51,12 +51,12 @@
 #include "temp_sensor.h"
 #include "sunlight_sensor.h"
 #include "port_and_clock.h"
-#include "adc.h"
-#include "water_level_sensor.h"
 
 /**
  * main.c
  */
+
+void sensor_output_uint_to_char(Data_Type sensor_type, uint16_t sensor_value, char arr[]);
 
 void main(void)
 {
@@ -70,23 +70,47 @@ void main(void)
     P2IFG &= ~BIT5; //clear interrupt
     P2DIR |= BIT5; //switch to output for waking up Xbee
 
+    temp_hum_soft_reset();
+    reset_sunlight_sensor();
+    configure_sunlight_sensor();
     __delay_cycles(COMM_WAIT_TIME);
 
     while (1)
     {
+        //P2OUT ^= BIT0;
         P2OUT &= ~BIT5; //output low to pull sleep pin down
 
         char char_buf[16] = { 0 };
-        uint16_t sensor_value = obtain_water_level_mm();
-        sensor_output_uint_to_char(H2OLEVEL, sensor_value, char_buf);
+        uint16_t temp_value = get_temperature();
+        //uint16_t temp_value = 33;
+        sensor_output_uint_to_char(TEMP, temp_value, char_buf);
         int buf_size = strlen(char_buf) + 1; //include the '\0' character
-
         send_to_UART(char_buf, buf_size); //send to UART
-        __delay_cycles(32000); //wait for xbee
+
+        memset(char_buf, 0, 16 * sizeof(char)); //clear buffer
+        uint16_t hum_value = get_humidity();
+        //uint16_t hum_value = 44;
+        sensor_output_uint_to_char(HUM, hum_value, char_buf);
+        buf_size = strlen(char_buf) + 1; //include the '\0' character
+        send_to_UART(char_buf, buf_size); //send to UART
+
+        memset(char_buf, 0, 16 * sizeof(char)); //clear buffer
+        uint16_t vis_value = read_sunlight_VIS();
+        //uint16_t vis_value = 55;
+        sensor_output_uint_to_char(VIS, vis_value, char_buf);
+        buf_size = strlen(char_buf) + 1; //include the '\0' character
+        send_to_UART(char_buf, buf_size); //send to UART
+
+        memset(char_buf, 0, 16 * sizeof(char)); //clear buffer
+        uint16_t uv_value = read_sunlight_UV();
+        //uint16_t uv_value = 66;
+        sensor_output_uint_to_char(UV, uv_value, char_buf);
+        buf_size = strlen(char_buf) + 1; //include the '\0' character
+        send_to_UART(char_buf, buf_size); //send to UART
+
+        __delay_cycles(5000); //wait for xbee
 
         P2OUT |= BIT5; //output high to pull sleep pin up
-        //P2DIR &= ~BIT5; //switch back to input again
-        //P2OUT ^= BIT0; //LED Toggle
         LPM0; //go to low power mode
     }
 }
@@ -260,9 +284,32 @@ void sensor_output_uint_to_char(Data_Type sensor_type, uint16_t sensor_value,
         arr[2] = 'R';
         arr[3] = ':';
         break;
+    case TEMP:
+        arr[0] = 'T';
+        arr[1] = 'M';
+        arr[2] = 'P';
+        arr[3] = ':';
+        break;
+    case HUM:
+        arr[0] = 'H';
+        arr[1] = 'U';
+        arr[2] = 'M';
+        arr[3] = ':';
+        break;
+    case VIS:
+        arr[0] = 'V';
+        arr[1] = 'I';
+        arr[2] = 'S';
+        arr[3] = ':';
+        break;
+    default: //UV
+        arr[0] = 'U';
+        arr[1] = '_';
+        arr[2] = 'V';
+        arr[3] = ':';
     }
     //sensor value: no more than 10 chars, including '\0'
-    unsigned int sensor_value_int = (unsigned int)sensor_value;
+    unsigned int sensor_value_int = (unsigned int) sensor_value;
     char temp_buffer[10];
     itoa(sensor_value_int, temp_buffer);
     memcpy(&arr[4], temp_buffer, strlen(temp_buffer));

@@ -298,10 +298,32 @@ void sensor_output_uint_to_char(Data_Type sensor_type, uint16_t sensor_value, ch
             arr[2] = 'R';
             arr[3] = ':';
             break;
+        case TEMP:
+            arr[0] = 'T';
+            arr[1] = 'M';
+            arr[2] = 'P';
+            arr[3] = ':';
+            break;
+        case HUM:
+            arr[0] = 'H';
+            arr[1] = 'U';
+            arr[2] = 'M';
+            arr[3] = ':';
+            break;
+        case VIS:
+            arr[0] = 'V';
+            arr[1] = 'I';
+            arr[2] = 'S';
+            arr[3] = ':';
+            break;
+        default: //UV
+            arr[0] = 'U';
+            arr[1] = '_';
+            arr[2] = 'V';
+            arr[3] = ':';
     }
     //sensor value: no more than 10 chars, including '\0'
-    //unsigned int sensor_value_int = (unsigned int)sensor_value;
-    unsigned int sensor_value_int = 123;
+    unsigned int sensor_value_int = (unsigned int)sensor_value;
     char temp_buffer[10];
     itoa(sensor_value_int, temp_buffer);
     //sprintf(temp_buffer, "%d", sensor_value_int);
