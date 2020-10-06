@@ -2,7 +2,7 @@
  * port_and_clock.c
  *
  *  Created on: Apr 3, 2020
- *      Author: Matt
+ *      Author: Nuoya Xie
  */
 
 #include "port_and_clock.h"
