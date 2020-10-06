@@ -2,7 +2,7 @@
  * water_level_sensor.c
  *
  *  Created on: Jul 2, 2020
- *      Author: Nuoya
+ *      Author: Nuoya Xie
  */
 
 #include "water_level_sensor.h"

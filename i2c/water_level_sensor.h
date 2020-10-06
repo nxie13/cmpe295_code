@@ -2,7 +2,7 @@
  * water_level_sensor.h
  *
  *  Created on: Jul 2, 2020
- *      Author: Nuoya
+ *      Author: Nuoya Xie
  */
 
 #ifndef WATER_LEVEL_SENSOR_H_

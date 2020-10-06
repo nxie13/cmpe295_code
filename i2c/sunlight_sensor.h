@@ -2,7 +2,7 @@
  * sunlight_sensor.h
  *
  *  Created on: Mar 30, 2020
- *      Author: Nuoya
+ *      Author: Nuoya Xie
  */
 
 #ifndef SUNLIGHT_SENSOR_H_

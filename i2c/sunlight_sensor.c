@@ -2,7 +2,7 @@
  * sunlight_sensor.c
  *
  *  Created on: Mar 30, 2020
- *      Author: Nuoya
+ *      Author: Nuoya Xie
  */
 
 #include "sunlight_sensor.h"

@@ -2,7 +2,7 @@
  * temp_sensor.h
  *
  *  Created on: Mar 30, 2020
- *      Author: Nuoya
+ *      Author: Nuoya Xie
  */
 
 #ifndef TEMP_SENSOR_H_

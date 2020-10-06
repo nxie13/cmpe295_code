@@ -2,7 +2,7 @@
  * temp_sensor.c
  *
  *  Created on: Mar 30, 2020
- *      Author: Nuoya
+ *      Author: Nuoya Xie
  */
 
 #include "temp_sensor.h"
