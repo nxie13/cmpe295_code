@@ -43,9 +43,9 @@ bool check_water_sensor_reading(uint8_t *data_buf)
 }
 
 //returns the height of water in mm
-int obtain_water_level_mm(void)
+unsigned int obtain_water_level_mm(void)
 {
-    int result = 0;
+    unsigned int result = 0;
     uint8_t data_buf_low_8[8] = { 0 };
     uint8_t data_buf_high_12[12] = { 0 };
     uint8_t data_buf_total[20] = { 0 };

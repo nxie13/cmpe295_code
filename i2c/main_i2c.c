@@ -48,14 +48,13 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include "temp_sensor.h"
-#include "sunlight_sensor.h"
 #include "port_and_clock.h"
-#include "adc.h"
 #include "water_level_sensor.h"
 
+int get_average(int arr[], int size);
+
 /**
- * main.c
+ * main.c for water level sensor
  */
 
 void main(void)
@@ -70,19 +69,30 @@ void main(void)
     P2IFG &= ~BIT5; //clear interrupt
     P2DIR |= BIT5; //switch to output for waking up Xbee
 
-    __delay_cycles(COMM_WAIT_TIME);
-
     while (1)
     {
         P2OUT &= ~BIT5; //output low to pull sleep pin down
 
         char char_buf[16] = { 0 };
-        uint16_t sensor_value = obtain_water_level_mm();
-        sensor_output_uint_to_char(H2OLEVEL, sensor_value, char_buf);
-        int buf_size = strlen(char_buf) + 1; //include the '\0' character
+        int i = 0;
+        uint16_t result_array[5] = {0};
 
+        //obtain 5 values
+        for (i; i < 5; i++)
+        {
+            char char_buf[16] = { 0 };
+            result_array[i] = obtain_water_level_mm();
+            sensor_output_uint_to_char(H2OLEVEL, result_array[i], char_buf);
+            int buf_size = strlen(char_buf) + 1; //include the '\0' character
+            send_to_UART(char_buf, buf_size); //send to UART
+        }
+        //take average of the 5 values and output to uart
+        uint16_t average = get_average(result_array, 5);
+        sensor_output_uint_to_char(H2OLEVEL, average, char_buf);
+        int buf_size = strlen(char_buf) + 1; //include the '\0' character
         send_to_UART(char_buf, buf_size); //send to UART
-        __delay_cycles(32000); //wait for xbee
+
+        __delay_cycles(5000); //wait for xbee
 
         P2OUT |= BIT5; //output high to pull sleep pin up
         //P2DIR &= ~BIT5; //switch back to input again
@@ -262,7 +272,7 @@ void sensor_output_uint_to_char(Data_Type sensor_type, uint16_t sensor_value,
         break;
     }
     //sensor value: no more than 10 chars, including '\0'
-    unsigned int sensor_value_int = (unsigned int)sensor_value;
+    unsigned int sensor_value_int = (unsigned int) sensor_value;
     char temp_buffer[10];
     itoa(sensor_value_int, temp_buffer);
     memcpy(&arr[4], temp_buffer, strlen(temp_buffer));
@@ -300,3 +310,13 @@ void reverse(char s[])
     }
 }
 
+int get_average(int arr[], int size)
+{
+    int i = 0;
+    int sum = 0;
+    for (i; i < size; i++)
+    {
+        sum += arr[i];
+    }
+    return ((int)sum) / size;
+}

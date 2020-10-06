@@ -23,7 +23,7 @@
 void getHigh12SectionValue(uint8_t* temp_buffer, int buffer_size);
 void getLow8SectionValue(uint8_t* temp_buffer, int buffer_size);
 bool check_water_sensor_reading(uint8_t * data_buf);
-int obtain_water_level_mm(void);
+unsigned int obtain_water_level_mm(void);
 
 
 #endif /* WATER_LEVEL_SENSOR_H_ */
