@@ -6,6 +6,7 @@
  */
 
 #include "sunlight_sensor.h"
+static const uint8_t DIRECTLY_UNDER_SUNLIGHT = 0;
 
 void configure_sunlight_sensor(void)
 {
@@ -30,30 +31,55 @@ void configure_sunlight_sensor(void)
     I2C_send_byte(SI114X_ADDR, SI114X_PS_LED21, SI114X_LED_CURRENT_22MA);
 
     write_sunlight_param_data(SI114X_PSLED12_SELECT,
-                              SI114X_PSLED12_SELECT_PS1_LED1);
+    SI114X_PSLED12_SELECT_PS1_LED1);
 
     //PS ADC SETTING
     write_sunlight_param_data(SI114X_PS_ADC_GAIN, SI114X_ADC_GAIN_DIV1);
     write_sunlight_param_data(SI114X_PS_ADC_COUNTER,
-                              SI114X_ADC_COUNTER_511ADCCLK);
-    write_sunlight_param_data(
-            SI114X_PS_ADC_MISC,
-            SI114X_ADC_MISC_HIGHRANGE | SI114X_ADC_MISC_ADC_RAWADC);
+    SI114X_ADC_COUNTER_511ADCCLK);
+    if (DIRECTLY_UNDER_SUNLIGHT) //set to under direct sunlight
+    {
+        write_sunlight_param_data(
+                SI114X_PS_ADC_MISC,
+                SI114X_ADC_MISC_HIGHRANGE | SI114X_ADC_MISC_ADC_RAWADC);
+    }
+    else //indoor conditions
+    {
+        write_sunlight_param_data(
+                SI114X_PS_ADC_MISC,
+                SI114X_ADC_MISC_LOWRANGE | SI114X_ADC_MISC_ADC_RAWADC);
+    }
 
-    //set VIS ADC Setting - set to under direct sunlight
+    //set VIS ADC Setting
     write_sunlight_param_data(SI114X_ALS_VIS_ADC_GAIN,
     SI114X_ADC_GAIN_DIV1);
     write_sunlight_param_data(SI114X_ALS_VIS_ADC_COUNTER,
     SI114X_ADC_COUNTER_511ADCCLK);
-    write_sunlight_param_data(SI114X_ALS_VIS_ADC_MISC,
-    SI114X_ADC_MISC_HIGHRANGE);
+    if (DIRECTLY_UNDER_SUNLIGHT) //set to under direct sunlight
+    {
+        write_sunlight_param_data(SI114X_ALS_VIS_ADC_MISC,
+        SI114X_ADC_MISC_HIGHRANGE);
+    }
+    else //indoor conditions
+    {
+        write_sunlight_param_data(SI114X_ALS_VIS_ADC_MISC,
+        SI114X_ADC_MISC_LOWRANGE);
+    }
 
-    //Set IR ADC setting - set to under direct sunlight
+    //Set IR ADC setting
     write_sunlight_param_data(SI114X_ALS_IR_ADC_GAIN, SI114X_ADC_GAIN_DIV1);
     write_sunlight_param_data(SI114X_ALS_IR_ADC_COUNTER,
     SI114X_ADC_COUNTER_511ADCCLK);
-    write_sunlight_param_data(SI114X_ALS_IR_ADC_MISC,
-    SI114X_ADC_MISC_HIGHRANGE);
+    if (DIRECTLY_UNDER_SUNLIGHT) //set to under direct sunlight
+    {
+        write_sunlight_param_data(SI114X_ALS_IR_ADC_MISC,
+        SI114X_ADC_MISC_HIGHRANGE);
+    }
+    else //indoor conditions
+    {
+        write_sunlight_param_data(SI114X_ALS_IR_ADC_MISC,
+        SI114X_ADC_MISC_LOWRANGE);
+    }
 
     //interrupt enable
     I2C_send_byte(SI114X_ADDR, SI114X_INT_CFG, SI114X_INT_CFG_INTOE);
@@ -92,18 +118,31 @@ void reset_sunlight_sensor(void)
 
 uint16_t read_sunlight_VIS(void)
 {
-    I2C_send_byte(SI114X_ADDR, SI114X_COMMAND, SI114X_PSALS_FORCE);
-    return I2C_receive_msg(SI114X_ADDR, SI114X_ALS_VIS_DATA0, 2); //read VIS_DATA
+    I2C_send_byte(SI114X_ADDR, SI114X_COMMAND, SI114X_ALS_FORCE);
+    uint16_t result = I2C_receive_msg(SI114X_ADDR, SI114X_ALS_VIS_DATA0, 2); //read VIS_DATA
+    //because according to data sheet, first byte gotten isn't MSB but LSB, the bits will need to be flipped
+    uint16_t lower_8_bits = (result >> 8);
+    uint16_t higher_8_bits = result & 0xff;
+    return (higher_8_bits << 8) | lower_8_bits;
 }
 
 uint16_t read_sunlight_IR(void)
 {
-    I2C_send_byte(SI114X_ADDR, SI114X_COMMAND, SI114X_PSALS_FORCE);
-    return I2C_receive_msg(SI114X_ADDR, SI114X_ALS_IR_DATA0, 2); //read IR_DATA
+    I2C_send_byte(SI114X_ADDR, SI114X_COMMAND, SI114X_ALS_FORCE);
+    uint16_t result = I2C_receive_msg(SI114X_ADDR, SI114X_ALS_IR_DATA0, 2); //read IR_DATA
+    //because according to data sheet, first byte gotten isn't MSB but LSB, the bits will need to be flipped
+    uint16_t lower_8_bits = (result >> 8);
+    uint16_t higher_8_bits = result & 0xff;
+    return (higher_8_bits << 8) | lower_8_bits;
 }
 
 uint16_t read_sunlight_UV(void)
 {
-    I2C_send_byte(SI114X_ADDR, SI114X_COMMAND, SI114X_PSALS_FORCE);
-    return I2C_receive_msg(SI114X_ADDR, SI114X_AUX_DATA0_UVINDEX0, 2); //read UV_DATA
+    I2C_send_byte(SI114X_ADDR, SI114X_COMMAND, SI114X_ALS_FORCE);
+    uint16_t result = I2C_receive_msg(SI114X_ADDR, SI114X_AUX_DATA0_UVINDEX0,
+                                      2); //read UV_DATA
+    //because according to data sheet, first byte gotten isn't MSB but LSB, the bits will need to be flipped
+    uint16_t lower_8_bits = (result >> 8);
+    uint16_t higher_8_bits = result & 0xff;
+    return (higher_8_bits << 8) | lower_8_bits;
 }
