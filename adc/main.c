@@ -22,9 +22,9 @@
  *2. MCU wakes up Xbee through pin P2.5
  *3. MCU gives sensor power and wait a little bit for sensor to get ready
  *4. MCU obtains sensor data
- *5. MCU sends data through UART to Xbee
- *6. MCU waits a set amount of time for Xbee to finish transmission.
- *7. MCU disables sensor power
+ *5. MCU disables sensor power
+ *6. MCU sends data through UART to Xbee
+ *7. MCU waits a set amount of time for Xbee to finish transmission.
  *8. MCU puts Xbee to sleep through pin P2.5 and goes to sleep mode itself
  *
  * UART Byte sequence:
@@ -80,6 +80,7 @@ void main(void)
 
         trigger_adc();
         while (ADC10CTL1 & ADC10BUSY);
+        P2OUT &= ~BIT2; //disable sensor power
 
         char char_buf[16] = {0};
         sensor_output_uint_to_char(SOILMOISTURE, ADC_value, char_buf);
@@ -89,7 +90,7 @@ void main(void)
         ADC_value = 0; //reset variable
 
         __delay_cycles(1000); //wait for xbee
-        P2OUT &= ~BIT2; //disable sensor power
+
         P2OUT |= BIT5; //output high to sleep pin
 
         LPM3; //go to low power mode

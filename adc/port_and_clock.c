@@ -22,10 +22,10 @@ void port_init(void)
     P2SEL2 &= ~BIT5; //GPIO function
     P2DIR &= ~BIT5; //input by default, but switch to output to pull sleep pin down when waking Xbee up
 
-    //P2.2 is used as the pin to receive ready signal from Xbee
+    //P2.2 is used as the pin to enable sensor power
     P2SEL &= ~BIT2;
     P2SEL2 &= ~BIT2; //GPIO function
-    P2DIR &= ~BIT2; //input
+    P2DIR |= BIT2; //output
 
     //P2.0 is debug LED
     P2SEL &= ~BIT0;
