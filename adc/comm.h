@@ -2,7 +2,7 @@
  * comm.h
  *
  *  Created on: Mar 30, 2020
- *      Author: Matt
+ *      Author: Nuoya Xie
  */
 
 #ifndef COMM_H_
