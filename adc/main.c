@@ -11,7 +11,7 @@
  *
  * UART Pins: P1.1(RXD) P1.2(TXD)
  * GPIO pin to tell Xbee to wake up: P2.5
- * GPIO pin to receive from Xbee when RF transmission is complete: P2.2
+ * GPIO pin to enable sensor power: P2.2
  * Debug LED pin: P2.0
  * ADC pin: P1.4 (A4)
  *
@@ -20,16 +20,16 @@
  *Sequence for MCU and XBee Communication
  *1. Timer wakes up MCU from sleep mode
  *2. MCU wakes up Xbee through pin P2.5
- *3. MCU obtains sensor data
- *4. MCU waits for Xbee to pull P2.2 to high, indicating Xbee is ready for UART transmission
- *4. After obtaining the ready signal, MCU sends data through UART to Xbee
- *5. MCU waits for signal from Xbee on port P2.2, indicating that Xbee is done sending RF
- *6. After ready signal is received from Xbee, MCU puts Xbee to sleep through pin P2.5 and goes to sleep mode itself
+ *3. MCU gives sensor power and wait a little bit for sensor to get ready
+ *4. MCU obtains sensor data
+ *5. MCU sends data through UART to Xbee
+ *6. MCU waits a set amount of time for Xbee to finish transmission.
+ *7. MCU disables sensor power
+ *8. MCU puts Xbee to sleep through pin P2.5 and goes to sleep mode itself
  *
  * UART Byte sequence:
  * UART communication speed is 1200 - to minimize TX errors
- * To send data over UART, first byte will the the total number of bytes sent during transmission, not including this byte
- * second byte will be identification - which sensor data is sent. The choices are:
+ * To send data over UART, first byte will be identification - which sensor data is sent. The choices are:
  * 0x01 - Temperature
  * 0x02 - humidity
  * 0x03 - sunlight
@@ -37,12 +37,10 @@
  * 0x05 - IR
  * 0x06 - TDS
  * 0x07 - water level sensor
+ * 0x08 - soil moisture
  *
- * two subsequent bytes will be actual data. first byte is MSB, and second byte is LSB
+ * subsequent bytes are data in character format
  *
- * This format of identification byte - data MSB byte - data LSB byte will keep going until all sensor data are sent
- *
- * TODO: implement error LED for any possible bad situations (i2c setting not correct, etc.)
  */
 
 #include <msp430.h>
@@ -76,10 +74,11 @@ void main(void)
 
     while (1)
     {
+        P2OUT |= BIT2; //enable sensor power
         P2OUT &= ~BIT5; //output low to pull sleep pin down
+        __delay_cycles(1000); //wait for xbee and sensor module to stabilize
 
         trigger_adc();
-
         while (ADC10CTL1 & ADC10BUSY);
 
         char char_buf[16] = {0};
@@ -90,9 +89,8 @@ void main(void)
         ADC_value = 0; //reset variable
 
         __delay_cycles(1000); //wait for xbee
+        P2OUT &= ~BIT2; //disable sensor power
         P2OUT |= BIT5; //output high to sleep pin
-
-        //P2OUT &= ~BIT0; //LED OFF
 
         LPM3; //go to low power mode
     }
