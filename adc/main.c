@@ -23,9 +23,10 @@
  *2. MCU wakes up Xbee through pin P2.5
  *3. MCU gives sensor power and wait a little bit for sensor to get ready
  *4. MCU obtains sensor data
- *5. MCU sends data through UART to Xbee
- *6. MCU waits a set amount of time for Xbee to finish transmission.
- *7. MCU puts Xbee to sleep through pin P2.5 and goes to sleep mode itself
+ *5. MCU disables sensor power
+ *6. MCU sends data through UART to Xbee
+ *7. MCU waits a set amount of time for Xbee to finish transmission.
+ *8. MCU puts Xbee to sleep through pin P2.5 and goes to sleep mode itself
  *
  * UART Byte sequence:
  * UART communication speed is 1200 - to minimize TX errors
@@ -76,11 +77,13 @@ void main(void)
     while (1)
     {
         P2OUT |= BIT2; //give power to sensor
+        __delay_cycles(32000); //wait for sensor to ready
         P2OUT &= ~BIT5; //output low to pull sleep pin down to wake up xbee
-        __delay_cycles(1000); //wait for xbee and sensor to ready
+        __delay_cycles(1000); //wait for xbee to ready
 
         trigger_adc();
         while (ADC10CTL1 & ADC10BUSY);
+        P2OUT &= ~BIT2; //stop giving power to sensor
 
         char char_buf[16] = {0};
         sensor_output_uint_to_char(TDS, ADC_value, char_buf);
@@ -90,9 +93,7 @@ void main(void)
 
         ADC_value = 0; //reset variable
 
-        //while (P2IN & BIT2); //wait for Xbee to Signal ready on pin P2.2
         __delay_cycles(1000); //wait for xbee
-        P2OUT &= ~BIT2; //stop giving power to sensor
         P2OUT |= BIT5; //output high to sleep pin
 
         LPM3; //go to low power mode
