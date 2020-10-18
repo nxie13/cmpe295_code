@@ -2,7 +2,7 @@
  * adc.h
  *
  *  Created on: May 3, 2020
- *      Author: Matt
+ *      Author: Nuoya Xie
  */
 
 #ifndef ADC_H_

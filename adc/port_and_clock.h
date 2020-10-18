@@ -2,13 +2,13 @@
  * port_and_clock.h
  *
  *  Created on: Apr 3, 2020
- *      Author: Matt
+ *      Author: Nuoya Xie
  */
 
 #ifndef PORT_AND_CLOCK_H_
 #define PORT_AND_CLOCK_H_
 
-#define SAMPLING_PERIOD 16 // sampling period for sensors in seconds. Need to be multiple of 16
+#define SAMPLING_PERIOD 64 // sampling period for sensors in seconds. Need to be multiple of 16
 
 #include <msp430.h>
 #include <stdio.h>
