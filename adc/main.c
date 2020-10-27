@@ -75,8 +75,9 @@ void main(void)
     while (1)
     {
         P2OUT |= BIT2; //enable sensor power
+        __delay_cycles(20000); //wait for sensor module to stabilize
         P2OUT &= ~BIT5; //output low to pull sleep pin down
-        __delay_cycles(1000); //wait for xbee and sensor module to stabilize
+        __delay_cycles(1000); //wait for xbee module to stabilize
 
         trigger_adc();
         while (ADC10CTL1 & ADC10BUSY);
