@@ -9,13 +9,13 @@
 
 void getHigh12SectionValue(uint8_t *temp_buffer, int buffer_size)
 {
-    memset(temp_buffer, 0, buffer_size);
+    memset(temp_buffer, 1, buffer_size);
     I2C_receive_msg_no_cmd(ATTINY1_HIGH_ADDR, buffer_size, temp_buffer);
 }
 
 void getLow8SectionValue(uint8_t *temp_buffer, int buffer_size)
 {
-    memset(temp_buffer, 0, buffer_size);
+    memset(temp_buffer, 1, buffer_size);
     I2C_receive_msg_no_cmd(ATTINY2_LOW_ADDR, buffer_size, temp_buffer);
 }
 

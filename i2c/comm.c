@@ -62,6 +62,7 @@ uint16_t I2C_receive_msg(uint8_t addr, uint8_t cmd, uint8_t count)
 void I2C_receive_msg_no_cmd(uint8_t addr, uint8_t count, uint8_t* receive_buffer)
 {
        //Initialize required values
+       MasterMode = RX_DATA_MODE;
        RXByteCtr = count;
        ReceiveIndex = 0;
 
@@ -70,13 +71,14 @@ void I2C_receive_msg_no_cmd(uint8_t addr, uint8_t count, uint8_t* receive_buffer
        IFG2 &= ~(UCB0TXIFG + UCB0RXIFG);       // Clear any pending interrupts
        IE2 |= UCB0RXIE;       // Enable RX interrupt
        IE2 &= ~UCB0TXIE;       // Disable TX interrupt
-       //UCB0I2CIE|=UCNACKIE;    //enable NACK interrupt
+       UCB0I2CIE|=UCNACKIE;    //enable NACK interrupt
 
        //bit 1: UCTXSTT - transmit START condition in master mode
        //bit 4: UCTR - Transmitter/receiver. 1 = transmitter, 0 = receiver
        UCB0CTL1 &= ~BIT4;
        UCB0CTL1 |= BIT1;    //Start transmission
-       while (MasterMode != IDLE_MODE); //when mastermode changes to idle, this means transmission is over
+       //while (MasterMode != IDLE_MODE); //when mastermode changes to idle, this means transmission is over
+       while (UCB0STAT & UCBBUSY);
        memcpy (receive_buffer, ReceiveBuffer, count);
 }
 
@@ -195,7 +197,7 @@ void I2C_init(void)
     UCB0CTL1 |= UCSWRST;                      // Enable SW reset
     UCB0CTL0 = UCMST + UCMODE_3 + UCSYNC;     // I2C Master, synchronous mode
     UCB0CTL1 = UCSSEL_2 + UCSWRST;            // Use SMCLK, keep SW reset
-    UCB0BR0 = 4;                            // fSCL = SMCLK/4 = 31250Hz (max)
+    UCB0BR0 = 10;                            // fSCL = SMCLK/10 = 100k (max)
     UCB0BR1 = 0;
     UCB0CTL1 &= ~UCSWRST;                    // Clear SW reset, resume operation
     UCB0I2CIE |= UCNACKIE | UCSTPIE;        // Enable nack, stop IFG

@@ -9,7 +9,7 @@
 #define PORT_AND_CLOCK_H_
 
 //#define SAMPLING_PERIOD 300 // sampling period for sensors in seconds. Need to be multiple of 300
-#define SAMPLING_PERIOD 8 // for debug purpose. sampling period for sensors in seconds. Need to be multiple of 4
+#define SAMPLING_PERIOD 32 // for debug purpose. sampling period for sensors in seconds. Need to be multiple of 4
 
 #include <msp430.h>
 #include <stdio.h>

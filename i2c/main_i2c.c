@@ -82,9 +82,9 @@ void main(void)
         {
             char char_buf[16] = { 0 };
             result_array[i] = obtain_water_level_mm();
-            sensor_output_uint_to_char(H2OLEVEL, result_array[i], char_buf);
-            int buf_size = strlen(char_buf) + 1; //include the '\0' character
-            send_to_UART(char_buf, buf_size); //send to UART
+            //sensor_output_uint_to_char(H2OLEVEL, result_array[i], char_buf);
+            //int buf_size = strlen(char_buf) + 1; //include the '\0' character
+            //send_to_UART(char_buf, buf_size); //send to UART
         }
         //take average of the 5 values and output to uart
         uint16_t average = get_average(result_array, 5);
@@ -110,24 +110,27 @@ __interrupt void USCIAB0TX_ISR(void)
     //P2OUT |= BIT0;
     if (IFG2 & UCB0RXIFG)                 // Receive Data Interrupt
     {
-        //Must read from UCB0RXBUF
-        uint8_t rx_val = UCB0RXBUF;
+        if (MasterMode == RX_DATA_MODE)
+        {
+            //Must read from UCB0RXBUF
+            uint8_t rx_val = UCB0RXBUF;
+            if (RXByteCtr)
+            {
+                ReceiveBuffer[ReceiveIndex++] = rx_val;
+                RXByteCtr--;
+            }
 
-        if (RXByteCtr)
-        {
-            ReceiveBuffer[ReceiveIndex++] = rx_val;
-            RXByteCtr--;
+            if (RXByteCtr == 1)
+            {
+                UCB0CTL1 |= UCTXSTP;
+            }
+            else if (RXByteCtr == 0)
+            {
+                IE2 &= ~UCB0RXIE;
+                MasterMode = IDLE_MODE;
+            }
         }
 
-        if (RXByteCtr == 1)
-        {
-            UCB0CTL1 |= UCTXSTP;
-        }
-        else if (RXByteCtr == 0)
-        {
-            IE2 &= ~UCB0RXIE;
-            MasterMode = IDLE_MODE;
-        }
     }
     else if (IFG2 & UCB0TXIFG)            // Transmit Data Interrupt
     {
@@ -209,6 +212,9 @@ void USCIAB0RX_ISR(void)
 {
     if (UCB0STAT & UCNACKIFG)
     {
+        UCB0CTL1 |= UCTXSTP;     // Send stop condition
+        MasterMode = IDLE_MODE;
+        IE2 &= ~( UCB0TXIE | UCB0RXIE);     // disable TX, RX interrupt
         UCB0STAT &= ~UCNACKIFG;             // Clear NACK Flags
     }
     if (UCB0STAT & UCSTPIFG)                        //Stop or NACK Interrupt
