@@ -6,7 +6,7 @@
  */
 
 #include "sunlight_sensor.h"
-static const uint8_t DIRECTLY_UNDER_SUNLIGHT = 0;
+static const uint8_t DIRECTLY_UNDER_SUNLIGHT = 1;
 
 void configure_sunlight_sensor(void)
 {
